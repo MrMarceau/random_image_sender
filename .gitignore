@@ -10,6 +10,9 @@ secrets.json
 # don't commit our env variables
 env.json
 
+# don't commit our Google Drive credentials
+RandomMemeSender*.json
+
 # don't commit our images
 images/*
 !images/.gitkeep

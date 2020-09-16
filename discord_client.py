@@ -7,12 +7,25 @@ import discord.ext.commands
 
 from get_file import rdm
 
+from oauth2client import client, file, tools
+from oauth2client.service_account import ServiceAccountCredentials
+from httplib2 import Http
+from apiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+import io
+
+import schedule
+import time
+
 # read our environement variables
 with open("env.json", "r") as env:
     ENV = json.load(env)
 
 # set our environement variables
 IMG_FOLDER = ENV["images_folder"]
+
+GOOGLE_APPLICATION_CREDENTIALS = ENV["google_drive_api_credentials"]
+GOOGLE_DRIVE_FOLDER_ID = ENV["google_drive_folder_id"]
 
 COLORS = {
     "BLACK": "\033[30m",
@@ -35,6 +48,26 @@ SIGN = (
     " "
 )
 
+def getMemes():
+    print('Started downloading files !')
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_APPLICATION_CREDENTIALS, SCOPES)
+
+    http_auth = credentials.authorize(Http())
+    drive = build('drive', 'v3', http=http_auth)
+
+    request = drive.files().list(q="'" + GOOGLE_DRIVE_FOLDER_ID + "' in parents").execute()
+    files = request.get('files', [])
+    for f in files:
+        fname = f.get('name')
+        request = drive.files().get_media(fileId=f.get('id'))
+        fh = io.FileIO('./images/' + fname, 'wb')
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            print ("Download %d%%." % int(status.progress() * 100))
 
 def DISPLAY_ERROR(error_msg):
     print(
@@ -164,5 +197,16 @@ async def on_ready():
         COLORS["NEUTRAL"]
     )
 
-
+schedule.every().monday.at("14:00").do(getMemes)
+schedule.every().tuesday.at("14:00").do(getMemes)
+schedule.every().wednesday.at("14:00").do(getMemes)
+schedule.every().thursday.at("14:00").do(getMemes)
+schedule.every().friday.at("14:00").do(getMemes)
+schedule.every().saturday.at("14:00").do(getMemes)
+schedule.every().sunday.at("14:00").do(getMemes)
+getMemes()
 bot.run(DISCORD_TOKEN)
+
+while True:
+    schedule.run_pending()
+    time.sleep(10800)
