@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 
 import discord.ext.commands
+import os, stat
 
 from get_file import rdm
 
@@ -67,7 +68,8 @@ def getMemes():
         done = False
         while done is False:
             status, done = downloader.next_chunk()
-            print ("Download %d%%." % int(status.progress() * 100))
+            print ("Download ./images/" + fname + " %d%%." % int(status.progress() * 100))
+            os.chmod('./images/' + fname, stat.S_IRUSR | stat.S_IRGRP)
 
 def DISPLAY_ERROR(error_msg):
     print(
