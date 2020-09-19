@@ -8,7 +8,6 @@ import os, stat
 
 from get_file import rdm
 
-from oauth2client import client, file, tools
 from oauth2client.service_account import ServiceAccountCredentials
 from httplib2 import Http
 from apiclient.discovery import build
