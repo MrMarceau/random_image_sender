@@ -60,6 +60,8 @@ def getMemes():
 
     request = drive.files().list(q="'" + GOOGLE_DRIVE_FOLDER_ID + "' in parents").execute()
     files = request.get('files', [])
+    counter = 0;
+
     for f in files:
         fname = f.get('name')
         request = drive.files().get_media(fileId=f.get('id'))
@@ -68,8 +70,10 @@ def getMemes():
         done = False
         while done is False:
             status, done = downloader.next_chunk()
-            print ("Download ./images/" + fname + " %d%%." % int(status.progress() * 100))
+            print ("Download ./images/" + fname + " at %d%%." % int(status.progress() * 100))
             os.chmod('./images/' + fname, stat.S_IRUSR | stat.S_IRGRP)
+            counter = counter + 1;
+    print ("Downloaded " + str(counter) + " files successfully !" )
 
 def DISPLAY_ERROR(error_msg):
     print(
