@@ -13,8 +13,7 @@ from httplib2 import Http
 from apiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import io
-
-import schedule
+import threading
 import time
 
 # read our environement variables
@@ -49,7 +48,8 @@ SIGN = (
 )
 
 def getMemes():
-    print('Started downloading files !')
+    now = datetime.now()
+    print("Started downloading files at " + now.strftime("%d/%m/%Y %H:%M:%S") + "!")
     SCOPES = ['https://www.googleapis.com/auth/drive']
 
     credentials = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_APPLICATION_CREDENTIALS, SCOPES)
@@ -57,7 +57,7 @@ def getMemes():
     http_auth = credentials.authorize(Http())
     drive = build('drive', 'v3', http=http_auth)
 
-    request = drive.files().list(q="'" + GOOGLE_DRIVE_FOLDER_ID + "' in parents").execute()
+    request = drive.files().list(q="'" + GOOGLE_DRIVE_FOLDER_ID + "' in parents", pageSize=1000).execute()
     files = request.get('files', [])
     counter = 0;
 
@@ -72,7 +72,19 @@ def getMemes():
             print ("Download ./images/" + fname + " at %d%%." % int(status.progress() * 100))
             os.chmod('./images/' + fname, stat.S_IRUSR | stat.S_IRGRP)
             counter = counter + 1;
-    print ("Downloaded " + str(counter) + " files successfully !" )
+
+    now = datetime.now()
+    print ("Finished downloading " + str(counter) + " files successfully at " + now.strftime("%d/%m/%Y %H:%M:%S") + "!" );
+
+
+my_timer = None
+
+def make_thread():
+    # create timer to rerun this method in 1 day (in seconds)
+    global my_timer
+    my_timer = threading.Timer(86400, make_thread)
+
+    getMemes()
 
 def DISPLAY_ERROR(error_msg):
     print(
@@ -202,16 +214,5 @@ async def on_ready():
         COLORS["NEUTRAL"]
     )
 
-schedule.every().monday.at("14:00").do(getMemes)
-schedule.every().tuesday.at("14:00").do(getMemes)
-schedule.every().wednesday.at("14:00").do(getMemes)
-schedule.every().thursday.at("14:00").do(getMemes)
-schedule.every().friday.at("14:00").do(getMemes)
-schedule.every().saturday.at("14:00").do(getMemes)
-schedule.every().sunday.at("14:00").do(getMemes)
-getMemes()
+make_thread()
 bot.run(DISCORD_TOKEN)
-
-while True:
-    schedule.run_pending()
-    time.sleep(10800)
