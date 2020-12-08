@@ -21,10 +21,12 @@ with open("env.json", "r") as env:
     ENV = json.load(env)
 
 # set our environement variables
-IMG_FOLDER = ENV["images_folder"]
+IMG_PRIVATE_FOLDER = ENV["images_private_folder"]
+IMG_PUBLIC_FOLDER = ENV["images_public_folder"]
 
 GOOGLE_APPLICATION_CREDENTIALS = ENV["google_drive_api_credentials"]
 GOOGLE_DRIVE_FOLDER_ID = ENV["google_drive_folder_id"]
+GOOGLE_DRIVE_PUBLIC_FOLDER_ID = ENV["google_drive_folder_id_public"]
 
 COLORS = {
     "BLACK": "\033[30m",
@@ -64,18 +66,47 @@ def getMemes():
     for f in files:
         fname = f.get('name')
         request = drive.files().get_media(fileId=f.get('id'))
-        fh = io.FileIO('./images/' + fname, 'wb')
+        fh = io.FileIO('./images/private/' + fname, 'wb')
         downloader = MediaIoBaseDownload(fh, request)
         done = False
         while done is False:
             status, done = downloader.next_chunk()
-            print ("Download ./images/" + fname + " at %d%%." % int(status.progress() * 100))
-            os.chmod('./images/' + fname, stat.S_IRUSR | stat.S_IRGRP)
+            print ("Download ./images/private/" + fname + " at %d%%." % int(status.progress() * 100))
+            os.chmod('./images/private/' + fname, stat.S_IRUSR | stat.S_IRGRP)
             counter = counter + 1;
 
     now = datetime.now()
     print ("Finished downloading " + str(counter) + " files successfully at " + now.strftime("%d/%m/%Y %H:%M:%S") + "!" );
 
+
+def getPublicMemes():
+    now = datetime.now()
+    print("Started downloading files at " + now.strftime("%d/%m/%Y %H:%M:%S") + "!")
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_APPLICATION_CREDENTIALS, SCOPES)
+
+    http_auth = credentials.authorize(Http())
+    drive = build('drive', 'v3', http=http_auth)
+
+    request = drive.files().list(q="'" + GOOGLE_DRIVE_PUBLIC_FOLDER_ID + "' in parents", pageSize=1000).execute()
+    files = request.get('files', [])
+    counter = 0;
+
+    for f in files:
+        fname = f.get('name')
+        request = drive.files().get_media(fileId=f.get('id'))
+        fh = io.FileIO('./images/public/' + fname, 'wb')
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            print ("Download ./images/public/" + fname + " at %d%%." % int(status.progress() * 100))
+            os.chmod('./images/public/' + fname, stat.S_IRUSR | stat.S_IRGRP)
+            counter = counter + 1;
+
+    now = datetime.now()
+    print ("Finished downloading " + str(counter) + " files successfully at " + now.strftime("%d/%m/%Y %H:%M:%S") + "!" );
 
 my_timer = None
 
@@ -83,8 +114,6 @@ def make_thread():
     # create timer to rerun this method in 1 day (in seconds)
     global my_timer
     my_timer = threading.Timer(86400, make_thread)
-
-    getMemes()
 
 def DISPLAY_ERROR(error_msg):
     print(
@@ -182,11 +211,18 @@ async def random_image(context):
         context.message.channel.is_nsfw()
     ):
         try:
-            msg_content = {
-                "file": discord.File(
-                    IMG_FOLDER + "/{}".format(rdm(IMG_FOLDER))
-                )
-            }
+            if context.message.channel.id == "randompublic":
+                msg_content = {
+                    "file": discord.File(
+                        IMG_PUBLIC_FOLDER + "/{}".format(rdm(IMG_FOLDER))
+                    )
+                }
+            elif context.message.channel.id == "randomprivate":
+                msg_content = {
+                    "file": discord.File(
+                        IMG_PRIVATE_FOLDER + "/{}".format(rdm(IMG_FOLDER))
+                    )
+                }
         except FileNotFoundError:
             DISPLAY_ERROR("The folder `{}` was not found".format(IMG_FOLDER))
             msg_content = {
